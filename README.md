@@ -86,3 +86,34 @@ After a successful run, you should find the following files in your output direc
     FLAIR_r2s_bet_regT1.nii.gz (The preprocessed FLAIR input)
     T1sub_r2s_bet.nii.gz       (If -t1sub was specified)
 
+## Building the image
+
+If you need to build the image yourself, follow these steps:
+
+1. Clone the repository.
+2. Set up the following folder structure (Git doesn't track empty folders so it's not there automatically):
+
+        scripts/
+          - segment/
+              - nnunet_code/
+              - parameters/
+
+3. Clone the nnU-Net code from https://github.com/MIC-DKFZ/nnUNet inside the `nnunet_code` folder you created (so that there's a new folder `nnUNet` inside).
+4. Put your trained model inside the `parameters` folder. For reference, this is what the structure of that folder looks like for our version of the image:
+
+        parameters/
+          - nnUNet/
+              - 3d_fullres/
+                  - Task12_BrainTumorIntern/
+                      - nnUNetTrainer__nnUNetPlans/
+                          - fold0/
+                              - model_best.model
+                              - model_best.model.pkl
+                          - plans.pkl
+                          - summary_allFolds__validation.json
+
+5. Build the image
+
+        docker build HD-GLIO-AUTO -t hd-glio-auto
+                  
+
