@@ -99,6 +99,7 @@ If you need to build the image yourself, follow these steps:
               - parameters/
 
 3. Clone the nnU-Net code from https://github.com/MIC-DKFZ/nnUNet inside the `nnunet_code` folder you created (so that there's a new folder `nnUNet` inside).
+4. Either train a model yourself or get our pretrained version from [here](https://zenodo.org/record/3380272).
 4. Put your trained model inside the `parameters` folder. For reference, this is what the structure of that folder looks like for our version of the image:
 
         parameters/
@@ -110,7 +111,7 @@ If you need to build the image yourself, follow these steps:
                               - model_best.model
                               - model_best.model.pkl
                           - plans.pkl
-                          - summary_allFolds__validation.json
+                          - summary_allFolds__validation.json (not necessary)
 
 5. Build the image
 
