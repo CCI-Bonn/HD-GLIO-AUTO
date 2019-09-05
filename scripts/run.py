@@ -226,21 +226,14 @@ def run(t1, ct1, t2, flair, output_dir,
 
     # prepare Decathlon format for nnU-Net and run segmentation
     if overwrite or "segmentation.nii.gz" not in existing_files:
-        for c in range(4):
-            new_name = os.path.join(os.path.dirname(files[c]), "segmentation_{:04d}.nii.gz".format(c))
-            shutil.copy(files[c], new_name)
-        os.chdir("/scripts/segment/nnunet_code/nnUNet/nnunet")
-        output = subp.check_output(["python3", "inference/predict_simple.py", "-i", output_dir, "-o", output_dir, "-t", "Task12_BrainTumorIntern"])
+        cmd = ["hd_glio_predict", "-t1", files[0], "-t1c", files[1], "-t2", files[2], "-flair", files[3], "-o", "segmentation.nii.gz"]
+        output = subp.check_output(cmd)
         if necrosis_to_background:
             seg_file = os.path.join(output_dir, "segmentation.nii.gz")
             img = nib.load(seg_file)
             data = img.get_data()
             data[data == 3] = 0  # necrosis to background
             nib.save(img, seg_file)
-        for c in range(4):
-            new_name = os.path.join(os.path.dirname(files[c]), "segmentation_{:04d}.nii.gz".format(c))
-            shutil.copy(new_name, files[c])
-        os.chdir(output_dir)
         if verbose:
             print("Created segmentation.nii.gz with the following output:")
             print(output)
