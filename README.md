@@ -91,30 +91,6 @@ After a successful run, you should find the following files in your output direc
 If you need to build the image yourself, follow these steps:
 
 1. Clone the repository.
-2. Set up the following folder structure (Git doesn't track empty folders so it's not there automatically):
-
-        scripts/
-          - segment/
-              - nnunet_code/
-              - parameters/
-
-3. Clone the nnU-Net code from https://github.com/MIC-DKFZ/nnUNet inside the `nnunet_code` folder you created (so that there's a new folder `nnUNet` inside).
-4. Either train a model yourself or get our pretrained version from [here](https://zenodo.org/record/3380272).
-4. Put your trained model inside the `parameters` folder. For reference, this is what the structure of that folder looks like for our version of the image:
-
-        parameters/
-          - nnUNet/
-              - 3d_fullres/
-                  - Task12_BrainTumorIntern/
-                      - nnUNetTrainer__nnUNetPlans/
-                          - fold0/
-                              - model_best.model
-                              - model_best.model.pkl
-                          - plans.pkl
-                          - summary_allFolds__validation.json (not necessary)
-
-5. Build the image
-
-        docker build HD-GLIO-AUTO -t hd-glio-auto
+2. Run `docker build` on the repository directory.
                   
 
