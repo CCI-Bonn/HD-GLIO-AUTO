@@ -52,7 +52,7 @@ The input types can be freely combined, the contents of your input folder could 
     T2.nii
     FLAIR.nii.gz
 
-**NOTE**: NIfTI files with multiple temporal volumes (e.g. 4D cT1-w sequences) are not supported (however can be splitted upfront into the individual temporal volumes using [FSL´s fslsplit](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Fslutil)).
+**NOTE**: NIfTI files with multiple temporal volumes (e.g. 4D cT1-w sequences) are not supported (however can be split upfront into the individual temporal volumes using [FSL´s fslsplit](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Fslutil)).
 
 After you created the input files the processing can be started with the following command, where **you only have to set `YOUR_INPUT_FOLDER` and `YOUR_OUTPUT_FOLDER`**:
 
