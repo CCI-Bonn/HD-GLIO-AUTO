@@ -29,32 +29,54 @@ import numpy as np
 # METHODS & CLASSES
 # =============================================================================
 
+
 def reorient2std(file_, overwrite=False):
-    outfile = file_.replace(".nii.gz", "_r2s.nii.gz")
-    if not os.path.exists(outfile) or overwrite:
-        cmd = ['fsl5.0-fslreorient2std', file_, outfile]
+    out_file = file_.replace(".nii.gz", "_r2s.nii.gz")
+    if not os.path.exists(out_file) or overwrite:
+        cmd = ["fslreorient2std", file_, out_file]
         output = subp.check_output(cmd)
     else:
-        output = "{} already exists and overwrite=False.".format(outfile)
-    return outfile, output
+        output = "{} already exists and overwrite=False.".format(out_file)
+    return out_file, output
 
 
 def register_to_t1(file_, reference_file, overwrite=False):
-    outfile = file_.replace(".nii.gz", "_regT1.nii.gz")
-    if not os.path.exists(outfile) or overwrite:
-        cmd = ['fsl5.0-flirt', '-in', file_, '-ref', reference_file, '-out', outfile, '-dof', '6', "-interp", "spline"]
+    out_file = file_.replace(".nii.gz", "_regT1.nii.gz")
+    mat_file = file_.replace(".nii.gz", "_regT1.mat")
+    if not os.path.exists(out_file) or overwrite:
+        cmd = [
+            "flirt",
+            "-in",
+            file_,
+            "-ref",
+            reference_file,
+            "-out",
+            out_file,
+            "-dof",
+            "6",
+            "-interp",
+            "spline",
+            "-omat",
+            mat_file,
+        ]
         output = subp.check_output(cmd)
     else:
-        output = "{} already exists and overwrite=False.".format(outfile)
-    return outfile, output
+        output = "{} already exists and overwrite=False.".format(out_file)
+    return out_file, output
 
 
-def run(t1, ct1, t2, flair, output_dir,
-        make_t1sub=False,
-        verbose=False,
-        overwrite=False,
-        necrosis_to_background=True,
-        copy_permissions=True):
+def run(
+    t1,
+    ct1,
+    t2,
+    flair,
+    output_dir,
+    make_t1sub=False,
+    verbose=False,
+    overwrite=False,
+    necrosis_to_background=True,
+    copy_permissions=True,
+):
 
     # switch to output dir to do work and create temporary working dir
     old_wd = os.getcwd()
@@ -90,7 +112,7 @@ def run(t1, ct1, t2, flair, output_dir,
         "segmentation_0002.nii.gz",
         "segmentation_0003.nii.gz",
         "T1_r2s_bet_norm.nii.gz",
-        "CT1_r2s_bet_regT1_norm.nii.gz"
+        "CT1_r2s_bet_regT1_norm.nii.gz",
     ]
     files_to_keep = [
         "T1_r2s_bet.nii.gz",
@@ -99,14 +121,19 @@ def run(t1, ct1, t2, flair, output_dir,
         "T2_r2s_bet_regT1.nii.gz",
         "FLAIR_r2s_bet_regT1.nii.gz",
         "segmentation.nii.gz",
-        "volumes.txt"
+        "volumes.txt",
     ]
     if make_t1sub:
         files_to_keep.append("T1sub_r2s_bet.nii.gz")
 
     files = [t1, ct1, t2, flair]
     names = ["T1", "CT1", "T2", "FLAIR"]
-    filenames_after_preprocessing = ["T1_r2s_bet.nii.gz", "CT1_r2s_bet_regT1.nii.gz", "T2_r2s_bet_regT1.nii.gz", "FLAIR_r2s_bet_regT1.nii.gz"]
+    filenames_after_preprocessing = [
+        "T1_r2s_bet.nii.gz",
+        "CT1_r2s_bet_regT1.nii.gz",
+        "T2_r2s_bet_regT1.nii.gz",
+        "FLAIR_r2s_bet_regT1.nii.gz",
+    ]
 
     # check if all preprocessed files are already there, if so, skip all of it
     need_preprocess = False
@@ -119,7 +146,9 @@ def run(t1, ct1, t2, flair, output_dir,
     if not need_preprocess:
         files = [os.path.join(output_dir, f) for f in filenames_after_preprocessing]
         if verbose:
-            print("All preprocessed inputs for segmentation are available, skipping preprocessing.")
+            print(
+                "All preprocessed inputs for segmentation are available, skipping preprocessing."
+            )
     else:
 
         # convert to NIfTI if necessary, otherwise copy to output_dir
@@ -136,10 +165,25 @@ def run(t1, ct1, t2, flair, output_dir,
                         print(names[f] + ".nii.gz already exists, continuing.")
                     continue
             if os.path.isdir(file_):
-                cmd = ["mcverter", "-o", output_dir, "-f", "nifti", "-v", "-n", "-F", names[f], file_]
+                cmd = [
+                    "mcverter",
+                    "-o",
+                    output_dir,
+                    "-f",
+                    "nifti",
+                    "-v",
+                    "-n",
+                    "-F",
+                    names[f],
+                    file_,
+                ]
                 output = subp.check_output(cmd)
                 if verbose:
-                    print("Converted {} to NIfTI with the following output:".format(os.path.basename(file_)))
+                    print(
+                        "Converted {} to NIfTI with the following output:".format(
+                            os.path.basename(file_)
+                        )
+                    )
                     print(output)
                 files[f] = os.path.join(output_dir, names[f] + ".nii")
             else:
@@ -147,19 +191,32 @@ def run(t1, ct1, t2, flair, output_dir,
                 shutil.copy(file_, new_file)
                 files[f] = new_file
                 if verbose:
-                    print("Copied {} to output directory.".format(os.path.basename(file_)))
+                    print(
+                        "Copied {} to output directory.".format(os.path.basename(file_))
+                    )
 
         # zip if necessary
         for f, file_ in enumerate(files):
             if not file_.endswith(".gz"):
-                if not overwrite and os.path.basename(file_.replace(".nii", ".nii.gz")) in existing_files:
+                if (
+                    not overwrite
+                    and os.path.basename(file_.replace(".nii", ".nii.gz"))
+                    in existing_files
+                ):
                     files[f] = file_.replace(".nii", ".nii.gz")
                     if verbose:
-                        print(os.path.basename(file_.replace(".nii", ".nii.gz")) + " already exists, not zipping .nii file.")
+                        print(
+                            os.path.basename(file_.replace(".nii", ".nii.gz"))
+                            + " already exists, not zipping .nii file."
+                        )
                     continue
                 output = subp.check_output(["gzip", file_])
                 if verbose:
-                    print("Zipped {} with the following output:".format(os.path.basename(file_)))
+                    print(
+                        "Zipped {} with the following output:".format(
+                            os.path.basename(file_)
+                        )
+                    )
                     print(output)
                 files[f] = file_.replace(".nii", ".nii.gz")
 
@@ -169,7 +226,9 @@ def run(t1, ct1, t2, flair, output_dir,
         files, outputs = list(zip(*results))
         files = list(files)
         if verbose:
-            print("Reoriented all files to standard orientation with the following outputs:")
+            print(
+                "Reoriented all files to standard orientation with the following outputs:"
+            )
             for output in outputs:
                 print(output)
 
@@ -179,26 +238,66 @@ def run(t1, ct1, t2, flair, output_dir,
             mask_file = file_.replace(".nii.gz", "_bet_mask.nii.gz")
             mask_files.append(mask_file)
             new_file = file_.replace(".nii.gz", "_bet.nii.gz")
-            if not overwrite and os.path.basename(new_file) in existing_files and os.path.basename(mask_file) in existing_files:
+            if (
+                not overwrite
+                and os.path.basename(new_file) in existing_files
+                and os.path.basename(mask_file) in existing_files
+            ):
                 files[f] = new_file
-                print("{} and {} already exist, continuing.".format(os.path.basename(new_file), os.path.basename(mask_file)))
+                print(
+                    "{} and {} already exist, continuing.".format(
+                        os.path.basename(new_file), os.path.basename(mask_file)
+                    )
+                )
                 continue
             output1 = subp.check_output(["hd-bet", "-i", file_, "-device", "0"])
-            cmd = ["fsl5.0-fslmaths", new_file, "-mas", mask_file, new_file]
+            cmd = ["fslmaths", new_file, "-mas", mask_file, new_file]
             output2 = subp.check_output(cmd)
             files[f] = new_file
             if verbose:
-                print("Applied brain extraction for {} with the following output:".format(os.path.basename(file_)))
+                print(
+                    "Applied brain extraction for {} with the following output:".format(
+                        os.path.basename(file_)
+                    )
+                )
                 print(output)
 
         # Register to T1
-        results = p.map(partial(register_to_t1, reference_file=files[0], overwrite=overwrite), files[1:])
+        results = p.map(
+            partial(register_to_t1, reference_file=files[0], overwrite=overwrite),
+            files[1:],
+        )
         new_files, outputs = list(zip(*results))
         files[1:] = new_files
         if verbose:
             print("Registered all sequences to T1 with the following outputs:")
             for output in outputs:
                 print(output)
+
+        # Re-apply brain masks, because registration can introduce non-zero
+        # values outside of brain region. This is fast, no need to parallelize.
+        for f, file_ in enumerate(files[1:]):
+            mask_file = mask_files[f + 1]
+            mat_file = file_.replace(".nii.gz", ".mat")
+            cmd = [
+                "flirt",
+                "-in",
+                mask_file,
+                "-out",
+                mask_file,
+                "-ref",
+                mask_files[0],
+                "-applyxfm",
+                "-init",
+                mat_file,
+            ]
+            output = subp.check_output(cmd)
+            cmd = ["fslmaths", file_, "-mas", mask_file, file_]
+            output2 = subp.check_output(cmd)
+            if verbose:
+                print("Re-applied masks to registered files with outputs:")
+                print(output)
+                print(output2)
 
     # T1 subtraction map
     if make_t1sub and (overwrite or "T1sub_r2s_bet.nii.gz" not in existing_files):
@@ -213,20 +312,33 @@ def run(t1, ct1, t2, flair, output_dir,
             new = nib.Nifti1Image(data, nifti.affine, nifti.header)
             outname = f.replace(".nii.gz", "_norm.nii.gz")
             nib.save(new, outname)
-        cmd = ['fsl5.0-fslmaths',
-               ct1_file.replace(".nii.gz", "_norm.nii.gz"),
-               '-sub',
-               t1_file.replace(".nii.gz", "_norm.nii.gz"),
-               sub_file]
+        cmd = [
+            "fslmaths",
+            ct1_file.replace(".nii.gz", "_norm.nii.gz"),
+            "-sub",
+            t1_file.replace(".nii.gz", "_norm.nii.gz"),
+            sub_file,
+        ]
         output = subp.check_output(cmd)
         if verbose:
             print("Made T1 subtraction map with output:")
             print(output)
 
-
     # prepare Decathlon format for nnU-Net and run segmentation
     if overwrite or "segmentation.nii.gz" not in existing_files:
-        cmd = ["hd_glio_predict", "-t1", files[0], "-t1c", files[1], "-t2", files[2], "-flair", files[3], "-o", "segmentation.nii.gz"]
+        cmd = [
+            "hd_glio_predict",
+            "-t1",
+            files[0],
+            "-t1c",
+            files[1],
+            "-t2",
+            files[2],
+            "-flair",
+            files[3],
+            "-o",
+            "segmentation.nii.gz",
+        ]
         output = subp.check_output(cmd)
         if necrosis_to_background:
             seg_file = os.path.join(output_dir, "segmentation.nii.gz")
@@ -247,10 +359,16 @@ def run(t1, ct1, t2, flair, output_dir,
         data = img.get_data()
         vol_edema = np.sum(data == 1)
         vol_enhancing = np.sum(data == 2)
-        with open(os.path.join(output_dir, "volumes.txt"), "w") as outfile:
-            outfile.write("volume_non_enhancing_T2_FLAIR_signal_abnormality_mm3: {:.2f}".format(vol_edema))
-            outfile.write("\n")
-            outfile.write("volume_contrast_enhancing_tumor_mm3: {:.2f}".format(vol_enhancing))
+        with open(os.path.join(output_dir, "volumes.txt"), "w") as out_file:
+            out_file.write(
+                "volume_non_enhancing_T2_FLAIR_signal_abnormality_mm3: {:.2f}".format(
+                    vol_edema
+                )
+            )
+            out_file.write("\n")
+            out_file.write(
+                "volume_contrast_enhancing_tumor_mm3: {:.2f}".format(vol_enhancing)
+            )
         if verbose:
             print("Created volumes.txt")
     else:
@@ -276,7 +394,11 @@ def run(t1, ct1, t2, flair, output_dir,
                 continue
             else:
                 shutil.copymode(t1, os.path.join(output_dir, file_))
-                shutil.chown(os.path.join(output_dir, file_), user=os.stat(t1).st_uid, group=os.stat(t1).st_gid)
+                shutil.chown(
+                    os.path.join(output_dir, file_),
+                    user=os.stat(t1).st_uid,
+                    group=os.stat(t1).st_gid,
+                )
                 if verbose:
                     print("Set permissions for {}".format(file_))
 
@@ -290,14 +412,29 @@ def run(t1, ct1, t2, flair, output_dir,
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Glioblastoma Segmentation")
-    parser.add_argument("-i", "--input_dir", type=str, required=True, help="Input directory")
-    parser.add_argument("-o", "--output_dir", type=str, default=None, help="Output directory")
+    parser.add_argument(
+        "-i", "--input_dir", type=str, required=True, help="Input directory"
+    )
+    parser.add_argument(
+        "-o", "--output_dir", type=str, default=None, help="Output directory"
+    )
     parser.add_argument("-t1sub", action="store_true", help="Create T1 subtraction map")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Toggle verbose output")
-    parser.add_argument("-ow", "--overwrite", action="store_true", help="Overwrite existing files")
-    parser.add_argument("-d", "--device", type=str, default="0", help="Select GPU (integer, default=0)")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Toggle verbose output"
+    )
+    parser.add_argument(
+        "-ow", "--overwrite", action="store_true", help="Overwrite existing files"
+    )
+    parser.add_argument(
+        "-d", "--device", type=str, default="0", help="Select GPU (integer, default=0)"
+    )
     # parser.add_argument("-kn", "--keep_necrosis", action="store_true", help="Do not remove necrosis from segmentation")
-    parser.add_argument("-np", "--no_permissions", action="store_true", help="Do not adjust permissions of created files (meaning they will be owned by root)")
+    parser.add_argument(
+        "-np",
+        "--no_permissions",
+        action="store_true",
+        help="Do not adjust permissions of created files (meaning they will be owned by root)",
+    )
     args = parser.parse_args()
 
     if args.output_dir is None:
@@ -320,6 +457,14 @@ if __name__ == "__main__":
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device
 
-    run(*inputs_resolved, output_dir, args.t1sub, args.verbose, args.overwrite, False, not args.no_permissions)
+    run(
+        *inputs_resolved,
+        output_dir,
+        args.t1sub,
+        args.verbose,
+        args.overwrite,
+        False,
+        not args.no_permissions
+    )
 
 # -*- coding: utf-8 -*-
