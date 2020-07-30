@@ -232,6 +232,11 @@ def run(
             for output in outputs:
                 print(output)
 
+        # save the current files, we will use the transformations from
+        # the registrations AFTER BET to register them to T1 space and then
+        # apply the T1 BET!
+        files_r2s = [f for f in files]
+
         # Brain extraction (do not parallelize because we run on gpu)
         mask_files = []
         for f, file_ in enumerate(files):
@@ -274,25 +279,27 @@ def run(
             for output in outputs:
                 print(output)
 
-        # Re-apply brain masks, because registration can introduce non-zero
-        # values outside of brain region. This is fast, no need to parallelize.
-        for f, file_ in enumerate(files[1:]):
-            mask_file = mask_files[f + 1]
-            mat_file = file_.replace(".nii.gz", ".mat")
+        # Transform original files (after r2s) to T1 space with .mat files
+        # from previous step, then apply T1 BET mask.
+        for f, file_ in enumerate(files_r2s[1:]):
+            name = files[f + 1]
+            t1_file = files[0]
+            mat_file = files[f + 1].replace(".nii.gz", ".mat")
+            mask_file = mask_files[0]  # T1 BET mask
             cmd = [
                 "flirt",
                 "-in",
-                mask_file,
+                file_,
                 "-out",
-                mask_file,
+                name,
                 "-ref",
-                mask_files[0],
+                t1_file,
                 "-applyxfm",
                 "-init",
                 mat_file,
             ]
             output = subp.check_output(cmd)
-            cmd = ["fslmaths", file_, "-mas", mask_file, file_]
+            cmd = ["fslmaths", name, "-mas", mask_file, name]
             output2 = subp.check_output(cmd)
             if verbose:
                 print("Re-applied masks to registered files with outputs:")

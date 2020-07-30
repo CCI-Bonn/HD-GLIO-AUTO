@@ -22,9 +22,9 @@ RUN echo "from hd_glio.setup_hd_glio import maybe_download_weights\n\
 maybe_download_weights()"\
 > hdglio_models.py && python3 hdglio_models.py
 
-ADD scripts scripts
+COPY fslinstaller.py fslinstaller.py
 
-RUN python scripts/fslinstaller.py -q -d /usr/local/fsl
+RUN python fslinstaller.py -q -d /usr/local/fsl
 # we could also source /usr/local/fsl/etc/fslconf/fsl.sh,
 # but I'm too lazy to look up how to do that (bash script.sh doesn't work)
 ENV FSLDIR="/usr/local/fsl"
@@ -39,12 +39,15 @@ ENV FSLOUTPUTTYPE="NIFTI_GZ"
 ENV FSLMULTIFILEQUIT="TRUE"
 ENV PATH="${PATH}:${FSLDIR}/bin"
 
+RUN rm -rf "${FSLDIR}/fslpython"
+
 RUN apt-get -qq -y install bc locales
 RUN locale-gen en_US.UTF-8
 ENV LANG="en_US.UTF-8"
 ENV LANGUAGE="en_US.UTF-8"
 ENV LC_ALL="en_US.UTF-8"
 
+ADD scripts scripts
 RUN mkdir /input && mkdir /output
 
 ENTRYPOINT ["python3", "scripts/run.py", "-i", "/input", "-o", "/output"]
