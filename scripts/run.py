@@ -297,6 +297,8 @@ def run(
                 "-applyxfm",
                 "-init",
                 mat_file,
+                "-interp",
+                "spline",
             ]
             output = subp.check_output(cmd)
             cmd = ["fslmaths", name, "-mas", mask_file, name]
