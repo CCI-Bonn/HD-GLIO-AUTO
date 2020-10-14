@@ -41,8 +41,8 @@ def reorient2std(file_, overwrite=False):
 
 
 def register_to_t1(file_, reference_file, overwrite=False):
-    out_file = file_.replace(".nii.gz", "_regT1.nii.gz")
-    mat_file = file_.replace(".nii.gz", "_regT1.mat")
+    out_file = file_.replace(".nii.gz", "_reg.nii.gz")
+    mat_file = file_.replace(".nii.gz", "_reg.mat")
     if not os.path.exists(out_file) or overwrite:
         cmd = [
             "flirt",
@@ -87,52 +87,59 @@ def run(
         "T1.nii",
         "T1.nii.gz",
         "T1_r2s.nii.gz",
+        "T1_r2s_bet.nii.gz",
+        "T1_r2s_bet_mask.nii.gz",
+        "T1_r2s_bet_reg.mat",
         "T1_info.txt",
         "CT1.nii",
         "CT1.nii.gz",
         "CT1_r2s.nii.gz",
         "CT1_r2s_bet.nii.gz",
         "CT1_r2s_bet_mask.nii.gz",
+        "CT1_r2s_bet_reg.mat",
         "CT1_info.txt",
         "T2.nii",
         "T2.nii.gz",
         "T2_r2s.nii.gz",
         "T2_r2s_bet.nii.gz",
         "T2_r2s_bet_mask.nii.gz",
+        "T2_r2s_bet_reg.mat",
         "T2_info.txt",
         "FLAIR.nii",
         "FLAIR.nii.gz",
         "FLAIR_r2s.nii.gz",
         "FLAIR_r2s_bet.nii.gz",
         "FLAIR_r2s_bet_mask.nii.gz",
+        "FLAIR_r2s_bet_reg.mat",
         "FLAIR_info.txt",
         "plans.pkl",
         "segmentation_0000.nii.gz",
         "segmentation_0001.nii.gz",
         "segmentation_0002.nii.gz",
         "segmentation_0003.nii.gz",
-        "T1_r2s_bet_norm.nii.gz",
-        "CT1_r2s_bet_regT1_norm.nii.gz",
+        "T1_r2s_bet_reg_norm.nii.gz",
+        "CT1_r2s_bet_reg_norm.nii.gz",
     ]
     files_to_keep = [
-        "T1_r2s_bet.nii.gz",
-        "T1_r2s_bet_mask.nii.gz",
-        "CT1_r2s_bet_regT1.nii.gz",
-        "T2_r2s_bet_regT1.nii.gz",
-        "FLAIR_r2s_bet_regT1.nii.gz",
+        "mask.nii.gz",
+        "T1_r2s_bet_reg.nii.gz",
+        "CT1_r2s_bet_reg.nii.gz",
+        "T2_r2s_bet_reg.nii.gz",
+        "FLAIR_r2s_bet_reg.nii.gz",
         "segmentation.nii.gz",
         "volumes.txt",
+        "postprocessing.json",
     ]
     if make_t1sub:
-        files_to_keep.append("T1sub_r2s_bet.nii.gz")
+        files_to_keep.append("T1sub_r2s_bet_reg.nii.gz")
 
     files = [t1, ct1, t2, flair]
     names = ["T1", "CT1", "T2", "FLAIR"]
     filenames_after_preprocessing = [
-        "T1_r2s_bet.nii.gz",
-        "CT1_r2s_bet_regT1.nii.gz",
-        "T2_r2s_bet_regT1.nii.gz",
-        "FLAIR_r2s_bet_regT1.nii.gz",
+        "T1_r2s_bet_reg.nii.gz",
+        "CT1_r2s_bet_reg.nii.gz",
+        "T2_r2s_bet_reg.nii.gz",
+        "FLAIR_r2s_bet_reg.nii.gz",
     ]
 
     # check if all preprocessed files are already there, if so, skip all of it
@@ -233,9 +240,24 @@ def run(
                 print(output)
 
         # save the current files, we will use the transformations from
-        # the registrations AFTER BET to register them to T1 space and then
-        # apply the T1 BET!
+        # the registrations AFTER BET to register them to a reference space
+        # and then apply the BET mask!
         files_r2s = [f for f in files]
+
+        # check the spacing for all files to determine which one will be our
+        # reference. Default is T1
+        ref_index = 0
+        min_spacing = 1e9
+        for f, file_ in enumerate(files):
+            try:
+                file_ = nib.load(file_)
+                spacing = int(np.product(file_.header.get_zooms()))
+                if spacing < min_spacing:
+                    min_spacing = spacing
+                    ref_index = f
+            except Exception as e:
+                continue
+        print("Using contrast {} as reference".format(names[ref_index]))
 
         # Brain extraction (do not parallelize because we run on gpu)
         mask_files = []
@@ -267,25 +289,32 @@ def run(
                 )
                 print(output)
 
-        # Register to T1
-        results = p.map(
-            partial(register_to_t1, reference_file=files[0], overwrite=overwrite),
-            files[1:],
+        # Copy reference mask to a new file to keep later
+        shutil.copyfile(
+            mask_files[ref_index],
+            os.path.join(os.path.dirname(mask_files[ref_index]), "mask.nii.gz"),
         )
-        new_files, outputs = list(zip(*results))
-        files[1:] = new_files
+
+        # Register to reference
+        results = p.map(
+            partial(
+                register_to_t1, reference_file=files[ref_index], overwrite=overwrite
+            ),
+            files,
+        )
+        files, outputs = list(zip(*results))
         if verbose:
             print("Registered all sequences to T1 with the following outputs:")
             for output in outputs:
                 print(output)
 
-        # Transform original files (after r2s) to T1 space with .mat files
-        # from previous step, then apply T1 BET mask.
-        for f, file_ in enumerate(files_r2s[1:]):
-            name = files[f + 1]
-            t1_file = files[0]
-            mat_file = files[f + 1].replace(".nii.gz", ".mat")
-            mask_file = mask_files[0]  # T1 BET mask
+        # Transform original files (after r2s) to reference space with .mat files
+        # from previous step, then apply reference BET mask.
+        for f, file_ in enumerate(files_r2s):
+            name = files[f]
+            ref_file = files[ref_index]
+            mat_file = files[f].replace(".nii.gz", ".mat")
+            mask_file = mask_files[ref_index]  # reference BET mask
             cmd = [
                 "flirt",
                 "-in",
@@ -293,7 +322,7 @@ def run(
                 "-out",
                 name,
                 "-ref",
-                t1_file,
+                ref_file,
                 "-applyxfm",
                 "-init",
                 mat_file,
