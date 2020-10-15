@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-cudnn7-runtime-ubuntu18.04
+FROM nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04
 
 RUN sed 's/main$/main universe/' -i /etc/apt/sources.list
 RUN apt-get -qq update && apt-get install wget git -y
@@ -11,7 +11,7 @@ RUN apt-get -qq update && DEBIAN_FRONTEND=noninteractive apt-get install mriconv
 
 # Python
 RUN pip3 install --upgrade pip setuptools
-RUN pip3 install --upgrade torch==1.4.0 nnunet matplotlib numpy pyxnat scikit-image IPython torchvision hd_glio
+RUN pip3 install --upgrade torch nnunet matplotlib numpy pyxnat scikit-image IPython torchvision hd_glio
 RUN pip3 install git+https://github.com/MIC-DKFZ/batchgenerators.git
 RUN git clone https://github.com/MIC-DKFZ/HD-BET.git && pip3 install -e HD-BET
 RUN echo "from HD_BET.utils import maybe_download_parameters\n\
