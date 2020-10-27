@@ -39,7 +39,7 @@ ENV FSLOUTPUTTYPE="NIFTI_GZ"
 ENV FSLMULTIFILEQUIT="TRUE"
 ENV PATH="${PATH}:${FSLDIR}/bin"
 
-RUN rm -rf "${FSLDIR}/fslpython"
+# RUN rm -rf "${FSLDIR}/fslpython"
 
 RUN apt-get -qq -y install bc locales
 RUN locale-gen en_US.UTF-8
