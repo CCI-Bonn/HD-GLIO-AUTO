@@ -257,7 +257,8 @@ def run(
                     ref_index = f
             except Exception as e:
                 continue
-        print("Using contrast {} as reference".format(names[ref_index]))
+        if verbose:
+            print("Using contrast {} as reference".format(names[ref_index]))
 
         # Brain extraction (do not parallelize because we run on gpu)
         mask_files = []
@@ -395,8 +396,9 @@ def run(
         seg_file = os.path.join(output_dir, "segmentation.nii.gz")
         img = nib.load(seg_file)
         data = img.get_data()
-        vol_edema = np.sum(data == 1)
-        vol_enhancing = np.sum(data == 2)
+        pixel_volume = np.product(img.header.get_zooms())
+        vol_edema = np.sum(data == 1) * pixel_volume
+        vol_enhancing = np.sum(data == 2) * pixel_volume
         with open(os.path.join(output_dir, "volumes.txt"), "w") as out_file:
             out_file.write(
                 "volume_non_enhancing_T2_FLAIR_signal_abnormality_mm3: {:.2f}".format(
